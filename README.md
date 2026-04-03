@@ -115,8 +115,10 @@ This repository includes a Render Blueprint file (`render.yaml`) that provisions
 - `trailmetrics-postgres` (managed Postgres)
 - `trailmetrics-redis` (managed Redis)
 - `trailmetrics-backend` (FastAPI web service)
-- `trailmetrics-simulator` (background worker)
 - `trailmetrics-frontend` (static site)
+
+For Render workspaces that do not support worker services on the selected plan,
+the backend enables an internal synthetic metrics generator via environment variables.
 
 Steps:
 

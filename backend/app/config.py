@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     alert_major_multiplier: float = 1.5
     alert_critical_multiplier: float = 2.0
     alert_dedup_cooldown_seconds: int = 300
+    enable_internal_simulator: bool = False
+    simulator_interval_seconds: int = 1
 
     jwt_secret_key: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"

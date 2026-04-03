@@ -52,25 +52,10 @@ services:
         value: "2.0"
       - key: ALERT_DEDUP_COOLDOWN_SECONDS
         value: "300"
-
-  - type: worker
-    name: trailmetrics-simulator
-    runtime: python
-    plan: free
-    rootDir: backend/simulator
-    buildCommand: pip install httpx
-    startCommand: python service_simulator.py
-    envVars:
-      - key: API_BASE_HOST
-        fromService:
-          type: web
-          name: trailmetrics-backend
-          property: host
-      - key: API_BASE_PORT
-        fromService:
-          type: web
-          name: trailmetrics-backend
-          property: port
+      - key: ENABLE_INTERNAL_SIMULATOR
+        value: "true"
+      - key: SIMULATOR_INTERVAL_SECONDS
+        value: "1"
 
   - type: web
     name: trailmetrics-frontend

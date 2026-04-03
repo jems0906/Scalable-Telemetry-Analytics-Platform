@@ -13,6 +13,7 @@ from app.routers.auth import router as auth_router
 from app.routers.metrics import router as metrics_router
 from app.routers.slo import router as slo_router
 from app.services.aggregation import compute_rollups
+from app.services.simulator import publish_synthetic_metrics
 from app.services.slo import evaluate_slos
 
 logging.basicConfig(level=logging.INFO)
@@ -54,11 +55,29 @@ def slo_job() -> None:
         db.close()
 
 
+def simulator_job() -> None:
+    db = SessionLocal()
+    try:
+        publish_synthetic_metrics(db)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     initialize_database()
     scheduler.add_job(rollup_job, "interval", seconds=30, id="rollup_job", replace_existing=True)
     scheduler.add_job(slo_job, "interval", seconds=60, id="slo_job", replace_existing=True)
+    if settings.enable_internal_simulator:
+        interval_seconds = max(1, settings.simulator_interval_seconds)
+        scheduler.add_job(
+            simulator_job,
+            "interval",
+            seconds=interval_seconds,
+            id="simulator_job",
+            replace_existing=True,
+        )
+        logger.info("Internal simulator enabled; interval=%ss", interval_seconds)
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
