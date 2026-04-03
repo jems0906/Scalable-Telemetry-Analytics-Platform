@@ -5,7 +5,13 @@ from datetime import datetime, timezone
 
 import httpx
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+api_base_url = os.getenv("API_BASE_URL", "").strip()
+if not api_base_url:
+    api_base_host = os.getenv("API_BASE_HOST", "localhost").strip()
+    api_base_port = os.getenv("API_BASE_PORT", "8000").strip()
+    api_base_url = f"http://{api_base_host}:{api_base_port}"
+
+API_BASE_URL = api_base_url
 SERVICES = ["checkout-service", "billing-service", "search-service", "auth-service"]
 
 

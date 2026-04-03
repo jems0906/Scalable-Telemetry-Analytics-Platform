@@ -1,4 +1,8 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+const explicitApiBase = import.meta.env.VITE_API_BASE_URL;
+const apiHost = import.meta.env.VITE_API_HOST;
+const apiScheme = import.meta.env.VITE_API_SCHEME || 'https';
+
+const API_BASE = explicitApiBase || (apiHost ? `${apiScheme}://${apiHost}` : '/api');
 
 const TOKEN_KEY = 'trailmetrics_auth_token';
 const ROLE_KEY = 'trailmetrics_auth_role';
