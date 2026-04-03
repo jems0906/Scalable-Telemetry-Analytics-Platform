@@ -1,0 +1,86 @@
+services:
+  - type: redis
+    name: trailmetrics-redis
+    plan: free
+    ipAllowList: []
+
+  - type: web
+    name: trailmetrics-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: trailmetrics-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: trailmetrics-redis
+          property: connectionString
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRES_MINUTES
+        value: "60"
+      - key: AUTH_ADMIN_USERNAME
+        value: admin
+      - key: AUTH_ADMIN_PASSWORD
+        value: admin123
+      - key: AUTH_OPERATOR_USERNAME
+        value: operator
+      - key: AUTH_OPERATOR_PASSWORD
+        value: operator123
+      - key: AUTH_VIEWER_USERNAME
+        value: viewer
+      - key: AUTH_VIEWER_PASSWORD
+        value: viewer123
+      - key: SLO_P99_LATENCY_MS
+        value: "500"
+      - key: SLO_ERROR_RATE
+        value: "0.01"
+      - key: ALERT_MAJOR_MULTIPLIER
+        value: "1.5"
+      - key: ALERT_CRITICAL_MULTIPLIER
+        value: "2.0"
+      - key: ALERT_DEDUP_COOLDOWN_SECONDS
+        value: "300"
+
+  - type: worker
+    name: trailmetrics-simulator
+    runtime: python
+    plan: free
+    rootDir: backend/simulator
+    buildCommand: pip install httpx
+    startCommand: python service_simulator.py
+    envVars:
+      - key: API_BASE_URL
+        fromService:
+          type: web
+          name: trailmetrics-backend
+          property: url
+
+  - type: web
+    name: trailmetrics-frontend
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: trailmetrics-backend
+          property: url
+
+databases:
+  - name: trailmetrics-postgres
+    plan: free

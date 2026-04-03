@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,6 +33,22 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     alert_from_email: str = "alerts@trailmetrics.local"
     alert_to_email: str = "ops@trailmetrics.local"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        if not isinstance(value, str):
+            return value
+
+        # Render provides postgres:// or postgresql:// URLs by default.
+        # SQLAlchemy needs the pg8000 dialect prefix to use the installed driver.
+        if value.startswith("postgres://"):
+            return "postgresql+pg8000://" + value[len("postgres://") :]
+
+        if value.startswith("postgresql://") and not value.startswith("postgresql+pg8000://"):
+            return "postgresql+pg8000://" + value[len("postgresql://") :]
+
+        return value
 
 
 settings = Settings()

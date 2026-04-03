@@ -108,6 +108,30 @@ kubectl apply -f k8s/trailmetrics.yaml
 minikube service frontend -n trailmetrics --url
 ```
 
+## Deploy on Render
+
+This repository includes a Render Blueprint file (`render.yaml`) that provisions:
+
+- `trailmetrics-postgres` (managed Postgres)
+- `trailmetrics-redis` (managed Redis)
+- `trailmetrics-backend` (FastAPI web service)
+- `trailmetrics-simulator` (background worker)
+- `trailmetrics-frontend` (static site)
+
+Steps:
+
+1. Push this repository to GitHub.
+2. In Render, select New + > Blueprint.
+3. Connect this GitHub repo and select branch `main`.
+4. Render detects `render.yaml`; click Apply.
+5. After provisioning finishes, open the `trailmetrics-frontend` URL.
+
+Notes:
+
+- `JWT_SECRET_KEY` is generated automatically by Render.
+- The backend reads Render Postgres URLs and auto-converts them to the `pg8000` SQLAlchemy format.
+- For production, replace default auth usernames/passwords with secure values in Render environment settings.
+
 ## API Summary
 
 ### `POST /metrics`
