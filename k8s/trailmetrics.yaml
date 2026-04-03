@@ -1,0 +1,221 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trailmetrics
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: trailmetrics-secrets
+  namespace: trailmetrics
+type: Opaque
+stringData:
+  POSTGRES_DB: trailmetrics
+  POSTGRES_USER: trailmetrics
+  POSTGRES_PASSWORD: trailmetrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: trailmetrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: trailmetrics-secrets
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: trailmetrics-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trailmetrics-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: pgdata
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: trailmetrics
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: trailmetrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: trailmetrics
+spec:
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: trailmetrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: trailmetrics-backend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: postgresql+pg8000://trailmetrics:trailmetrics@postgres:5432/trailmetrics
+            - name: REDIS_URL
+              value: redis://redis:6379/0
+            - name: ALLOWED_ORIGINS
+              value: "*"
+            - name: SLO_P99_LATENCY_MS
+              value: "500"
+            - name: SLO_ERROR_RATE
+              value: "0.01"
+            - name: JWT_SECRET_KEY
+              value: dev-secret-change-me
+            - name: AUTH_ADMIN_USERNAME
+              value: admin
+            - name: AUTH_ADMIN_PASSWORD
+              value: admin123
+            - name: AUTH_OPERATOR_USERNAME
+              value: operator
+            - name: AUTH_OPERATOR_PASSWORD
+              value: operator123
+            - name: AUTH_VIEWER_USERNAME
+              value: viewer
+            - name: AUTH_VIEWER_PASSWORD
+              value: viewer123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: trailmetrics
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulator
+  namespace: trailmetrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simulator
+  template:
+    metadata:
+      labels:
+        app: simulator
+    spec:
+      containers:
+        - name: simulator
+          image: trailmetrics-simulator:latest
+          imagePullPolicy: Never
+          env:
+            - name: API_BASE_URL
+              value: http://backend:8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: trailmetrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: trailmetrics-frontend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: trailmetrics
+spec:
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080

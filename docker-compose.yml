@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: trailmetrics
+      POSTGRES_USER: trailmetrics
+      POSTGRES_PASSWORD: trailmetrics
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env.example
+    environment:
+      DATABASE_URL: postgresql+pg8000://trailmetrics:trailmetrics@postgres:5432/trailmetrics
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_ORIGINS: http://localhost:5173
+      JWT_SECRET_KEY: dev-secret-change-me
+      AUTH_ADMIN_USERNAME: admin
+      AUTH_ADMIN_PASSWORD: admin123
+      AUTH_OPERATOR_USERNAME: operator
+      AUTH_OPERATOR_PASSWORD: operator123
+      AUTH_VIEWER_USERNAME: viewer
+      AUTH_VIEWER_PASSWORD: viewer123
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+  simulator:
+    build:
+      context: ./backend/simulator
+    environment:
+      API_BASE_URL: http://backend:8000
+    depends_on:
+      - backend
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
